@@ -101,8 +101,9 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 // Start server if executed directly
 if (process.env.NODE_ENV !== 'test' && require.main === module) {
-  const server = app.listen(PORT, () => {
-    console.log(`Study Groups API Server listening on port ${PORT}`);
+  const PORT_NUM = parseInt(process.env.PORT || '3000', 10);
+  const server = app.listen(PORT_NUM, '0.0.0.0', () => {
+    console.log(`Study Groups API Server listening on 0.0.0.0:${PORT_NUM}`);
     if (process.env.ENABLE_IN_PROCESS_WORKER === 'true') {
       console.log('[Server] Starting in-process email worker...');
       emailWorker.start();

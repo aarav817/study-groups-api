@@ -5,7 +5,12 @@ dotenv.config();
 
 export const pool = new Pool(
   process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL }
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
+          ? false
+          : { rejectUnauthorized: false },
+      }
     : {
         host: process.env.PGHOST || '/run/postgresql',
         port: parseInt(process.env.PGPORT || '5432', 10),
