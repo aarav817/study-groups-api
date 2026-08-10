@@ -90,10 +90,21 @@ router.post('/signup', async (req: AuthenticatedRequest, res: Response, next: Ne
       verificationUrl,
     });
 
+    delete user.password_hash;
+    const sessionToken = createSession(user.id);
+    const isProd = process.env.NODE_ENV === 'production';
+
+    res.cookie('session_token', sessionToken, {
+      httpOnly: true,
+      secure: isProd,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: isProd ? 'none' : 'lax',
+    });
+
     return res.status(201).json({
       success: true,
-      message: 'Account registered! Please check your email and click the verification link to finish account creation.',
-      data: { user, verification_token: verificationToken },
+      message: 'Account registered successfully!',
+      data: { user, session_token: sessionToken, verification_token: verificationToken },
     });
   } catch (err) {
     next(err);
@@ -146,12 +157,13 @@ router.post('/login', async (req: AuthenticatedRequest, res: Response, next: Nex
 
     delete user.password_hash;
     const sessionToken = createSession(user.id);
+    const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('session_token', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
+      sameSite: isProd ? 'none' : 'lax',
     });
 
     return res.status(200).json({
