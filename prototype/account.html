@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App - Account</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <a href="groups.html" class="brand">
+        Study App <span class="brand-badge">PROTOTYPE</span>
+      </a>
+      <nav class="header-nav">
+        <a href="settings.html">Settings</a>
+        <a href="account.html" class="active">Account</a>
+        <a href="index.html" class="btn-logout">Log Out</a>
+      </nav>
+    </header>
+
+    <div class="main-body">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav>
+          <a href="groups.html">
+            <span>Groups</span>
+            <span class="nav-counter">3</span>
+          </a>
+          <a href="calendar.html">Calendar</a>
+          <a href="materials.html">Materials Library</a>
+          <a href="messages.html">Messages</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="content-area">
+        <h2 class="page-title" style="margin-bottom: 1.5rem;">Account Profile</h2>
+
+        <div class="card" style="max-width: 600px;">
+          <h3 class="card-title">User Information</h3>
+          
+          <div class="form-group">
+            <label for="accName">Full Name</label>
+            <input type="text" id="accName" value="Alex Morgan">
+          </div>
+
+          <div class="form-group">
+            <label for="accEmail">Email Address</label>
+            <input type="email" id="accEmail" value="alex@stanford.edu">
+          </div>
+
+          <div class="form-group">
+            <label for="accMajor">Major / Program</label>
+            <input type="text" id="accMajor" value="Computer Science">
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button class="btn btn-primary" onclick="alert('Account details updated!')">Update Account</button>
+            <a href="index.html" class="btn btn-secondary">Log Out</a>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+</body>
+</html>

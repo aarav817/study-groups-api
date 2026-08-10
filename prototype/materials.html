@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App - Materials Library</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <a href="groups.html" class="brand">
+        Study App <span class="brand-badge">PROTOTYPE</span>
+      </a>
+      <nav class="header-nav">
+        <a href="settings.html">Settings</a>
+        <a href="account.html">Account</a>
+        <a href="index.html" class="btn-logout">Log Out</a>
+      </nav>
+    </header>
+
+    <div class="main-body">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav>
+          <a href="groups.html">
+            <span>Groups</span>
+            <span class="nav-counter">3</span>
+          </a>
+          <a href="calendar.html">Calendar</a>
+          <a href="materials.html" class="active">Materials Library</a>
+          <a href="messages.html">Messages</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="content-area">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Materials Library</h2>
+            <p class="page-subtitle">Central repository for study guides, notes, and shared resources.</p>
+          </div>
+          <button class="btn btn-primary" onclick="alert('Upload document prompt')">+ Upload Document</button>
+        </div>
+
+        <div class="card">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase;">
+                <th style="padding: 0.75rem 0.5rem;">Document Title</th>
+                <th style="padding: 0.75rem 0.5rem;">Group / Subject</th>
+                <th style="padding: 0.75rem 0.5rem;">File Type</th>
+                <th style="padding: 0.75rem 0.5rem;">Uploaded By</th>
+                <th style="padding: 0.75rem 0.5rem; text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.88rem;">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">Lecture Notes - Week 1</td>
+                <td style="padding: 0.75rem 0.5rem;"><span class="badge badge-blue">CS 101</span></td>
+                <td style="padding: 0.75rem 0.5rem;">PDF (2.4 MB)</td>
+                <td style="padding: 0.75rem 0.5rem;">Alice Smith</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: right;">
+                  <button class="btn btn-secondary btn-sm" onclick="alert('Downloading Lecture Notes')">Download</button>
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.88rem;">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">Practice Homework 2 Problems</td>
+                <td style="padding: 0.75rem 0.5rem;"><span class="badge badge-blue">CS 101</span></td>
+                <td style="padding: 0.75rem 0.5rem;">DOCX (1.1 MB)</td>
+                <td style="padding: 0.75rem 0.5rem;">Bob Jones</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: right;">
+                  <button class="btn btn-secondary btn-sm" onclick="alert('Downloading Homework 2')">Download</button>
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.88rem;">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">Reaction Mechanisms Chart</td>
+                <td style="padding: 0.75rem 0.5rem;"><span class="badge badge-emerald">Organic Chem</span></td>
+                <td style="padding: 0.75rem 0.5rem;">PDF (4.1 MB)</td>
+                <td style="padding: 0.75rem 0.5rem;">Sarah Connor</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: right;">
+                  <button class="btn btn-secondary btn-sm" onclick="alert('Downloading Reaction Chart')">Download</button>
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.88rem;">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">Matrix Operations & Proofs</td>
+                <td style="padding: 0.75rem 0.5rem;"><span class="badge badge-amber">Linear Algebra</span></td>
+                <td style="padding: 0.75rem 0.5rem;">PDF (1.9 MB)</td>
+                <td style="padding: 0.75rem 0.5rem;">Dr. Miller</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: right;">
+                  <button class="btn btn-secondary btn-sm" onclick="alert('Downloading Matrix Proofs')">Download</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+</body>
+</html>

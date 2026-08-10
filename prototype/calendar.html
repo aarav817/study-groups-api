@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App - Calendar</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <a href="groups.html" class="brand">
+        Study App <span class="brand-badge">PROTOTYPE</span>
+      </a>
+      <nav class="header-nav">
+        <a href="settings.html">Settings</a>
+        <a href="account.html">Account</a>
+        <a href="index.html" class="btn-logout">Log Out</a>
+      </nav>
+    </header>
+
+    <div class="main-body">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav>
+          <a href="groups.html">
+            <span>Groups</span>
+            <span class="nav-counter">3</span>
+          </a>
+          <a href="calendar.html" class="active">Calendar</a>
+          <a href="materials.html">Materials Library</a>
+          <a href="messages.html">Messages</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="content-area">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Study Calendar</h2>
+            <p class="page-subtitle">View and schedule study sessions across your groups.</p>
+          </div>
+          <button class="btn btn-primary" onclick="scheduleNewEvent()">+ Schedule Session</button>
+        </div>
+
+        <!-- Month Navigation Bar -->
+        <div class="calendar-controls-bar">
+          <div class="month-nav-group">
+            <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">
+              &larr; Previous
+            </button>
+            <span class="current-month-text" id="monthYearDisplay">July 2026</span>
+            <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">
+              Next &rarr;
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="resetToToday()">Today</button>
+          </div>
+        </div>
+
+        <!-- Calendar Month Table Grid -->
+        <div class="card" style="padding: 0.5rem;">
+          <table class="calendar-table">
+            <thead>
+              <tr>
+                <th>Sun</th>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+              </tr>
+            </thead>
+            <tbody id="calendarGridBody">
+              <!-- Rendered dynamically by JS -->
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    let currentYear = 2026;
+    let currentMonthIndex = 6;
+
+    const calendarEventsData = {
+      6: {
+        15: [{ title: "Physics Lab Prep", class: "" }],
+        22: [{ title: "4:00 PM CS 101 Review", class: "" }],
+        23: [{ title: "5:00 PM Orgo Lab", class: "emerald" }],
+        24: [{ title: "2:00 PM CS Quiz", class: "amber" }]
+      },
+      7: {
+        5: [{ title: "Midterm Exam Prep", class: "amber" }],
+        12: [{ title: "Final Problem Sprint", class: "" }]
+      },
+      5: {
+        18: [{ title: "Summer Kickoff Study", class: "emerald" }]
+      }
+    };
+
+    function renderCalendar() {
+      document.getElementById('monthYearDisplay').innerText = `${months[currentMonthIndex]} ${currentYear}`;
+      
+      const firstDay = new Date(currentYear, currentMonthIndex, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+
+      const tbody = document.getElementById('calendarGridBody');
+      tbody.innerHTML = '';
+
+      let dateCount = 1;
+      let html = '';
+
+      for (let i = 0; i < 6; i++) {
+        let rowHtml = '<tr>';
+        let hasDateInRow = false;
+
+        for (let j = 0; j < 7; j++) {
+          if ((i === 0 && j < firstDay) || dateCount > daysInMonth) {
+            rowHtml += `<td></td>`;
+          } else {
+            hasDateInRow = true;
+            const isToday = (currentMonthIndex === 6 && currentYear === 2026 && dateCount === 22);
+            
+            const monthEvents = calendarEventsData[currentMonthIndex]?.[dateCount] || [];
+            const eventsHtml = monthEvents.map(e => `
+              <span class="event-chip ${e.class}">${e.title}</span>
+            `).join('');
+
+            rowHtml += `
+              <td class="${isToday ? 'today' : ''}">
+                <span class="day-num">${dateCount}</span>
+                ${isToday ? '<span class="badge badge-blue" style="font-size:0.65rem; padding:1px 4px; margin-left:4px;">TODAY</span>' : ''}
+                ${eventsHtml}
+              </td>
+            `;
+            dateCount++;
+          }
+        }
+        rowHtml += '</tr>';
+        if (hasDateInRow) {
+          html += rowHtml;
+        }
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      currentMonthIndex += delta;
+      if (currentMonthIndex > 11) {
+        currentMonthIndex = 0;
+        currentYear++;
+      } else if (currentMonthIndex < 0) {
+        currentMonthIndex = 11;
+        currentYear--;
+      }
+      renderCalendar();
+    }
+
+    function resetToToday() {
+      currentMonthIndex = 6;
+      currentYear = 2026;
+      renderCalendar();
+    }
+
+    function scheduleNewEvent() {
+      const title = prompt("Enter study session title:");
+      if (title) {
+        alert(`Session "${title}" scheduled for ${months[currentMonthIndex]} ${currentYear}!`);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCalendar();
+    });
+  </script>
+</body>
+</html>

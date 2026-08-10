@@ -1,0 +1,44 @@
+{
+  "name": "study-groups-api",
+  "version": "1.0.0",
+  "description": "Backend REST API server for Study Groups web application",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "worker": "node dist/worker.js",
+    "dev": "tsx watch src/server.ts",
+    "worker:dev": "tsx watch src/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/api.test.ts && tsx tests/emailQueue.test.ts"
+  },
+  "keywords": [
+    "study-groups",
+    "api",
+    "express",
+    "postgres"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.11.1",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/ioredis": "^4.28.10",
+    "@types/node": "^26.1.2",
+    "@types/pg": "^8.20.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

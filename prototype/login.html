@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App - Sign In</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="top-header">
+    <a href="index.html" class="brand">
+      Study App <span class="brand-badge">PROTOTYPE</span>
+    </a>
+    <nav class="header-nav">
+      <a href="signup.html">Create Account</a>
+    </nav>
+  </header>
+
+  <div class="auth-container">
+    <h1 style="font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 0.25rem;">Sign In</h1>
+    <p style="font-size: 0.875rem; color: var(--text-muted); text-align: center; margin-bottom: 1.5rem;">Welcome back to your study workspace</p>
+
+    <form action="groups.html" method="GET">
+      <div class="form-group">
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" name="email" value="alex@stanford.edu" required>
+      </div>
+
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" name="password" value="••••••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Sign In to App</button>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem;">
+      Need an account? <a href="signup.html" style="color: var(--primary-color); font-weight: 500;">Create Account</a>
+    </div>
+  </div>
+
+</body>
+</html>

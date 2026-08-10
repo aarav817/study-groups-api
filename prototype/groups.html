@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App - Groups</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <a href="groups.html" class="brand">
+        Study App <span class="brand-badge">PROTOTYPE</span>
+      </a>
+      <nav class="header-nav">
+        <a href="settings.html">Settings</a>
+        <a href="account.html">Account</a>
+        <a href="index.html" class="btn-logout">Log Out</a>
+      </nav>
+    </header>
+
+    <div class="main-body">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav>
+          <a href="groups.html" class="active">
+            <span>Groups</span>
+            <span class="nav-counter">3</span>
+          </a>
+          <a href="calendar.html">Calendar</a>
+          <a href="materials.html">Materials Library</a>
+          <a href="messages.html">Messages</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="content-area">
+        
+        <div class="groups-grid">
+          <!-- Groups Sidebar Panel -->
+          <div class="group-sidebar-card">
+            <div class="group-sidebar-header">
+              <span style="font-weight: 600; font-size: 0.9rem;">My Groups</span>
+              <button class="btn btn-sm btn-primary" onclick="createNewGroupPrompt()">+ Create Group</button>
+            </div>
+            
+            <div class="group-list-item active" onclick="switchGroup('cs101', this)">
+              <div class="group-item-title">CS 101 Study Group</div>
+              <div class="group-item-sub">4 members • Active now</div>
+            </div>
+            
+            <div class="group-list-item" onclick="switchGroup('ochem', this)">
+              <div class="group-item-title">Organic Chemistry</div>
+              <div class="group-item-sub">3 members • 2 materials</div>
+            </div>
+            
+            <div class="group-list-item" onclick="switchGroup('linmath', this)">
+              <div class="group-item-title">Linear Algebra</div>
+              <div class="group-item-sub">3 members • 1 event</div>
+            </div>
+          </div>
+
+          <!-- Selected Group Workspace -->
+          <div id="groupWorkspace">
+            <!-- Group Header -->
+            <div class="group-header-box">
+              <div class="group-title-row">
+                <div>
+                  <h2 class="group-main-title" id="groupTitle">CS 101 Study Group</h2>
+                  <p class="page-subtitle" id="groupDesc">Introductory Computer Science, Trees, Graphs & Algorithms.</p>
+                </div>
+                <div class="group-action-btns">
+                  <button class="btn btn-secondary btn-sm" onclick="createInviteLink()">
+                    <span>Create Invite Link</span>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="openGroupSettings()">
+                    <span>Group Settings</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 3 Tabs Near Title: Materials, Events, Chat -->
+              <div class="group-section-tabs">
+                <button class="group-tab-btn active" id="tabBtnMaterials" onclick="switchGroupTab('materials')">
+                  Materials (<span id="materialsCount">3</span>)
+                </button>
+                <button class="group-tab-btn" id="tabBtnEvents" onclick="switchGroupTab('events')">
+                  Events (<span id="eventsCount">2</span>)
+                </button>
+                <button class="group-tab-btn" id="tabBtnChat" onclick="switchGroupTab('chat')">
+                  Chat
+                </button>
+              </div>
+            </div>
+
+            <!-- Group Layout with Main Tab Content + Members Sidebar -->
+            <div class="group-tab-layout">
+              
+              <!-- Left: Active Inner Tab Content -->
+              <div class="group-tab-main">
+                
+                <!-- 1. MATERIALS TAB PANE -->
+                <div id="pane-materials" class="tab-pane-content active">
+                  <div class="card">
+                    <div class="card-title">
+                      <span>Shared Files & Documents</span>
+                      <button class="btn btn-sm btn-primary" onclick="addMaterialPrompt()">+ Add Material</button>
+                    </div>
+                    <ul class="simple-list" id="materialsList">
+                      <!-- Rendered by JS -->
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- 2. EVENTS TAB PANE -->
+                <div id="pane-events" class="tab-pane-content">
+                  <div class="card">
+                    <div class="card-title">
+                      <span>Upcoming Study Sessions</span>
+                      <button class="btn btn-sm btn-primary" onclick="scheduleEventPrompt()">+ Schedule Event</button>
+                    </div>
+                    <ul class="simple-list" id="eventsList">
+                      <!-- Rendered by JS -->
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- 3. CHAT TAB PANE -->
+                <div id="pane-chat" class="tab-pane-content">
+                  <div class="card" style="padding: 0;">
+                    <div class="chat-box">
+                      <div class="chat-messages" id="chatMessages">
+                        <!-- Rendered by JS -->
+                      </div>
+                      <form class="chat-input-row" onsubmit="handleSendChat(event)">
+                        <input type="text" id="chatInput" placeholder="Type a message to group..." required>
+                        <button type="submit" class="btn btn-primary btn-sm">Send</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Right: Members Sidebar -->
+              <div class="group-members-side">
+                <div class="card">
+                  <div class="card-title" style="margin-bottom: 0.5rem;">
+                    <span>Group Members</span>
+                    <span class="badge badge-blue" id="memberCountBadge">4</span>
+                  </div>
+                  <ul class="simple-list" id="memberList">
+                    <!-- Rendered by JS -->
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const groupData = {
+      cs101: {
+        title: "CS 101 Study Group",
+        desc: "Introductory Computer Science, Trees, Graphs & Algorithms.",
+        members: [
+          { name: "Alice Smith", role: "Host" },
+          { name: "Bob Jones", role: "Member" },
+          { name: "Charlie Brown", role: "Member" },
+          { name: "David Wilson", role: "Member" }
+        ],
+        materials: [
+          { title: "Lecture Notes - Week 1", format: "PDF", size: "2.4 MB", date: "Jul 20" },
+          { title: "Practice Homework 2 Problems", format: "DOCX", size: "1.1 MB", date: "Jul 21" },
+          { title: "Midterm Algorithms Review Guide", format: "PDF", size: "3.8 MB", date: "Jul 22" }
+        ],
+        events: [
+          { title: "Review Session - Trees & Heap Sort", time: "Tomorrow at 4:00 PM", location: "Virtual Room 1" },
+          { title: "Midterm Quiz Practice Sprint", time: "Friday at 2:00 PM", location: "Library Study Room 2" }
+        ],
+        messages: [
+          { sender: "Alice Smith", time: "3:14 PM", text: "Welcome everyone! Please check out the Midterm Review Guide in the Materials tab." },
+          { sender: "Bob Jones", time: "3:16 PM", text: "Thanks Alice! Looking forward to tomorrow's review session." }
+        ]
+      },
+      ochem: {
+        title: "Organic Chemistry",
+        desc: "Reaction mechanisms, stereochemistry, and lab reviews.",
+        members: [
+          { name: "Sarah Connor", role: "Host" },
+          { name: "John Reese", role: "Member" },
+          { name: "Kyle Vance", role: "Member" }
+        ],
+        materials: [
+          { title: "Reaction Mechanisms Chart", format: "PDF", size: "4.1 MB", date: "Jul 18" },
+          { title: "Lab Report Summary Template", format: "DOCX", size: "850 KB", date: "Jul 19" }
+        ],
+        events: [
+          { title: "Lab Synthesis Prep Session", time: "Thursday at 5:00 PM", location: "Chemistry Lab B" }
+        ],
+        messages: [
+          { sender: "Sarah Connor", time: "11:00 AM", text: "Please review the reaction chart before Thursday's lab prep." }
+        ]
+      },
+      linmath: {
+        title: "Linear Algebra",
+        desc: "Vectors, matrices, linear transformations, and proofs.",
+        members: [
+          { name: "Dr. Miller", role: "Host" },
+          { name: "Eva Green", role: "Member" },
+          { name: "Frank Wright", role: "Member" }
+        ],
+        materials: [
+          { title: "Matrix Operations & Proofs Practice", format: "PDF", size: "1.9 MB", date: "Jul 15" }
+        ],
+        events: [
+          { title: "Eigenvalues Problem Solving Sprint", time: "Wednesday at 3:00 PM", location: "Math Building 204" }
+        ],
+        messages: [
+          { sender: "Eva Green", time: "2:15 PM", text: "Does anyone have questions on section 3.2 problems?" }
+        ]
+      }
+    };
+
+    let activeGroupKey = 'cs101';
+    let activeTabName = 'materials';
+
+    function switchGroup(key, element) {
+      activeGroupKey = key;
+      document.querySelectorAll('.group-list-item').forEach(el => el.classList.remove('active'));
+      if (element) {
+        element.classList.add('active');
+      }
+
+      const data = groupData[key];
+      document.getElementById('groupTitle').innerText = data.title;
+      document.getElementById('groupDesc').innerText = data.desc;
+
+      document.getElementById('materialsCount').innerText = data.materials.length;
+      document.getElementById('eventsCount').innerText = data.events.length;
+      document.getElementById('memberCountBadge').innerText = data.members.length;
+
+      renderMaterials(data.materials);
+      renderEvents(data.events);
+      renderChat(data.messages);
+      renderMembers(data.members);
+    }
+
+    function switchGroupTab(tabName) {
+      activeTabName = tabName;
+      document.querySelectorAll('.group-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+
+      document.querySelectorAll('.tab-pane-content').forEach(pane => pane.classList.remove('active'));
+      document.getElementById(`pane-${tabName}`).classList.add('active');
+    }
+
+    function renderMaterials(materials) {
+      const container = document.getElementById('materialsList');
+      if (!materials || materials.length === 0) {
+        container.innerHTML = `<li style="color: var(--text-muted); padding: 0.75rem 0;">No materials uploaded yet.</li>`;
+        return;
+      }
+      container.innerHTML = materials.map(m => `
+        <li>
+          <div class="item-main-info">
+            <span class="item-title-text">${m.title}</span>
+            <span class="item-sub-text">${m.format} • ${m.size} • Uploaded ${m.date}</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="alert('Downloading ${m.title}')">Download</button>
+        </li>
+      `).join('');
+    }
+
+    function renderEvents(events) {
+      const container = document.getElementById('eventsList');
+      if (!events || events.length === 0) {
+        container.innerHTML = `<li style="color: var(--text-muted); padding: 0.75rem 0;">No upcoming events scheduled.</li>`;
+        return;
+      }
+      container.innerHTML = events.map(e => `
+        <li>
+          <div class="item-main-info">
+            <span class="item-title-text">${e.title}</span>
+            <span class="item-sub-text">${e.time} (${e.location})</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="alert('You are attending this session!')">Attend</button>
+        </li>
+      `).join('');
+    }
+
+    function renderChat(messages) {
+      const container = document.getElementById('chatMessages');
+      if (!messages || messages.length === 0) {
+        container.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">No messages yet. Send a message below!</div>`;
+        return;
+      }
+      container.innerHTML = messages.map(m => `
+        <div class="chat-msg">
+          <div class="msg-header">
+            <span class="msg-sender">${m.sender}</span>
+            <span class="msg-time">${m.time}</span>
+          </div>
+          <div class="msg-bubble ${m.sender === 'You' ? 'self' : ''}">${m.text}</div>
+        </div>
+      `).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function renderMembers(members) {
+      const container = document.getElementById('memberList');
+      container.innerHTML = members.map(m => `
+        <li style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+          <span style="font-size: 0.875rem; font-weight: 500;">${m.name}</span>
+          <span class="badge ${m.role === 'Host' ? 'badge-blue' : 'badge-emerald'}">${m.role}</span>
+        </li>
+      `).join('');
+    }
+
+    function handleSendChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      groupData[activeGroupKey].messages.push({ sender: "You", time: timeStr, text: text });
+      renderChat(groupData[activeGroupKey].messages);
+      input.value = "";
+    }
+
+    function createInviteLink() {
+      const dummyLink = `https://studyapp.com/join?group=${activeGroupKey}&token=8f9a2b`;
+      prompt("Share this invite link with your study partners:", dummyLink);
+    }
+
+    function openGroupSettings() {
+      alert(`Opening settings for "${groupData[activeGroupKey].title}". Here you can manage permissions, rename the group, or update privacy settings.`);
+    }
+
+    function createNewGroupPrompt() {
+      const groupName = prompt("Enter a name for your new study group:");
+      if (groupName) {
+        alert(`Group "${groupName}" created!`);
+      }
+    }
+
+    function addMaterialPrompt() {
+      const title = prompt("Enter title of document to upload:");
+      if (title) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        groupData[activeGroupKey].materials.push({
+          title: title,
+          format: "PDF",
+          size: "1.5 MB",
+          date: dateStr
+        });
+        document.getElementById('materialsCount').innerText = groupData[activeGroupKey].materials.length;
+        renderMaterials(groupData[activeGroupKey].materials);
+        alert(`Document "${title}" uploaded!`);
+      }
+    }
+
+    function scheduleEventPrompt() {
+      const title = prompt("Enter title of study event:");
+      if (title) {
+        groupData[activeGroupKey].events.push({
+          title: title,
+          time: "Scheduled for next week",
+          location: "Virtual Room 1"
+        });
+        document.getElementById('eventsCount').innerText = groupData[activeGroupKey].events.length;
+        renderEvents(groupData[activeGroupKey].events);
+        alert(`Event "${title}" scheduled!`);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMaterials(groupData.cs101.materials);
+      renderEvents(groupData.cs101.events);
+      renderChat(groupData.cs101.messages);
+      renderMembers(groupData.cs101.members);
+    });
+  </script>
+</body>
+</html>

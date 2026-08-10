@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App - Messages</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <a href="groups.html" class="brand">
+        Study App <span class="brand-badge">PROTOTYPE</span>
+      </a>
+      <nav class="header-nav">
+        <a href="settings.html">Settings</a>
+        <a href="account.html">Account</a>
+        <a href="index.html" class="btn-logout">Log Out</a>
+      </nav>
+    </header>
+
+    <div class="main-body">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav>
+          <a href="groups.html">
+            <span>Groups</span>
+            <span class="nav-counter">3</span>
+          </a>
+          <a href="calendar.html">Calendar</a>
+          <a href="materials.html">Materials Library</a>
+          <a href="messages.html" class="active">Messages</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="content-area">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">Messages</h2>
+            <p class="page-subtitle">Direct peer messages and private study chats.</p>
+          </div>
+          <button class="btn btn-primary" onclick="alert('New direct message prompt')">+ New Message</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem;">
+          <!-- Contacts list -->
+          <div class="card" style="padding: 0.5rem 0;">
+            <ul class="simple-list">
+              <li style="padding: 0.75rem 1rem; cursor: pointer; background-color: var(--primary-light); font-weight: 600;" onclick="selectDm('Alice Smith', this)">
+                <div>
+                  <div style="font-size: 0.88rem;">Alice Smith</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">Online • CS 101</div>
+                </div>
+              </li>
+              <li style="padding: 0.75rem 1rem; cursor: pointer;" onclick="selectDm('Bob Jones', this)">
+                <div>
+                  <div style="font-size: 0.88rem;">Bob Jones</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">Offline • CS 101</div>
+                </div>
+              </li>
+              <li style="padding: 0.75rem 1rem; cursor: pointer;" onclick="selectDm('Sarah Connor', this)">
+                <div>
+                  <div style="font-size: 0.88rem;">Sarah Connor</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">Online • Orgo</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- DM Chat area -->
+          <div class="card" style="padding: 0;">
+            <div style="padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-size: 1rem; font-weight: 600;" id="dmHeader">Alice Smith</h3>
+              <span class="badge badge-emerald">Active Now</span>
+            </div>
+
+            <div class="chat-box" style="height: 320px; border: none;">
+              <div class="chat-messages" id="dmMessages">
+                <div class="chat-msg">
+                  <div class="msg-header">
+                    <span class="msg-sender">Alice Smith</span>
+                    <span class="msg-time">12:40 PM</span>
+                  </div>
+                  <div class="msg-bubble">Hi! Are you coming to tomorrow's CS 101 review session?</div>
+                </div>
+                <div class="chat-msg">
+                  <div class="msg-header">
+                    <span class="msg-sender">You</span>
+                    <span class="msg-time">12:42 PM</span>
+                  </div>
+                  <div class="msg-bubble self">Yes, I'll be there! I uploaded my notes to Materials too.</div>
+                </div>
+              </div>
+              <form class="chat-input-row" onsubmit="handleSendDm(event)">
+                <input type="text" id="dmInput" placeholder="Type a direct message..." required>
+                <button type="submit" class="btn btn-primary btn-sm">Send</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    function selectDm(name, el) {
+      document.querySelectorAll('.simple-list li').forEach(li => {
+        li.style.backgroundColor = 'transparent';
+        li.style.fontWeight = '400';
+      });
+      el.style.backgroundColor = 'var(--primary-light)';
+      el.style.fontWeight = '600';
+
+      document.getElementById('dmHeader').innerText = name;
+      document.getElementById('dmMessages').innerHTML = `
+        <div class="chat-msg">
+          <div class="msg-header">
+            <span class="msg-sender">${name}</span>
+            <span class="msg-time">Just now</span>
+          </div>
+          <div class="msg-bubble">Hey, do you want to compare study notes before the quiz?</div>
+        </div>
+      `;
+    }
+
+    function handleSendDm(e) {
+      e.preventDefault();
+      const input = document.getElementById('dmInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const body = document.getElementById('dmMessages');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      body.insertAdjacentHTML('beforeend', `
+        <div class="chat-msg">
+          <div class="msg-header">
+            <span class="msg-sender">You</span>
+            <span class="msg-time">${timeStr}</span>
+          </div>
+          <div class="msg-bubble self">${text}</div>
+        </div>
+      `);
+      body.scrollTop = body.scrollHeight;
+      input.value = "";
+    }
+  </script>
+</body>
+</html>
