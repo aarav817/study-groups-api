@@ -21,15 +21,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "ioredis": "^5.11.1",
-    "pg": "^8.13.1"
-  },
-  "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
@@ -37,8 +28,17 @@
     "@types/ioredis": "^4.28.10",
     "@types/node": "^26.1.2",
     "@types/pg": "^8.20.0",
-    "ts-node": "^10.9.2",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.11.1",
+    "pg": "^8.13.1",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
   }
 }
