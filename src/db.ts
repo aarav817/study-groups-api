@@ -49,9 +49,23 @@ export const query = async <R extends QueryResultRow = any>(
   }
 };
 
-// Ensure database schema migrations for email verification features
+// Ensure database schema migrations and auto-initialization from schema.sql
 (async () => {
   try {
+    await pool.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+    const tableCheck = await pool.query("SELECT to_regclass('public.users');");
+    if (!tableCheck.rows[0]?.to_regclass) {
+      console.log('[DB] Database tables not found. Auto-initializing database schema from schema.sql...');
+      const fs = require('fs');
+      const path = require('path');
+      const schemaSqlPath = path.join(__dirname, '../schema.sql');
+      if (fs.existsSync(schemaSqlPath)) {
+        const schemaSql = fs.readFileSync(schemaSqlPath, 'utf8');
+        await pool.query(schemaSql);
+        console.log('[DB] Schema initialized successfully.');
+      }
+    }
+
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64);
@@ -70,8 +84,8 @@ export const query = async <R extends QueryResultRow = any>(
       ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS conversation_id UUID REFERENCES group_conversations(id) ON DELETE CASCADE;
       CREATE INDEX IF NOT EXISTS idx_group_messages_conversation ON group_messages(conversation_id);
     `);
-  } catch (err) {
-    // Ignore migration error if DB connecting later or test environment
+  } catch (err: any) {
+    console.error('[DB Initialization Log]:', err.message);
   }
 })();
 

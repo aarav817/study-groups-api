@@ -67,6 +67,16 @@ app.use('/api/v1', materialsRouter);
 app.use('/api/v1', messagesRouter);
 app.use('/api/v1/reports', reportsRouter);
 
+// Root endpoint for Railway health probes & browser landing
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Study Groups API is running',
+    health: '/health',
+    version: 'v1',
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
