@@ -18,10 +18,10 @@ const sentEmailsLog: SentEmailRecord[] = [];
 let simulateFailuresRemaining = 0;
 
 /**
- * Helper to get a configured Resend API client if RESEND_API_KEY or SMTP_PASS is set.
+ * Helper to get a configured Resend API client using RESEND_API_KEY, SMTP_PASS, or default fallback key.
  */
 function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+  const apiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS || 're_rbx5FaPs_PjK9JujT9QWKsNHyCnsdDfsJ';
   if (!apiKey || !apiKey.startsWith('re_')) {
     return null;
   }
@@ -106,7 +106,7 @@ export async function sendGroupJoinNotification(
 
   const resend = getResendClient();
   const transporter = getTransporter();
-  const fromAddress = process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev';
+  const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
 
   if (resend) {
     try {
@@ -117,6 +117,12 @@ export async function sendGroupJoinNotification(
         text: textBody,
         html: htmlBody,
       });
+
+      if (response.error) {
+        console.error(`[EmailService] Resend API Error for ${ownerEmail}:`, response.error.message);
+        throw new Error(`Resend Error: ${response.error.message}`);
+      }
+
       console.log(`[EmailService] Email successfully sent via Resend API to ${ownerEmail}. ID: ${response.data?.id}`);
     } catch (err: any) {
       console.error(`[EmailService] Resend API error for ${ownerEmail}:`, err.message);
@@ -125,7 +131,7 @@ export async function sendGroupJoinNotification(
   } else if (transporter) {
     try {
       await transporter.sendMail({
-        from: fromAddress,
+        from: process.env.SMTP_FROM || 'onboarding@resend.dev',
         to: ownerEmail,
         subject,
         text: textBody,
@@ -182,7 +188,7 @@ export async function sendAccountVerificationEmail(
 
   const resend = getResendClient();
   const transporter = getTransporter();
-  const fromAddress = process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev';
+  const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
 
   if (resend) {
     try {
@@ -193,6 +199,12 @@ export async function sendAccountVerificationEmail(
         text: textBody,
         html: htmlBody,
       });
+
+      if (response.error) {
+        console.error(`[EmailService] Resend API Error for ${userEmail}:`, response.error.message);
+        throw new Error(`Resend Error: ${response.error.message}`);
+      }
+
       console.log(`[EmailService] Real verification email successfully sent via Resend API to ${userEmail}. ID: ${response.data?.id}`);
     } catch (err: any) {
       console.error(`[EmailService] Resend API error for ${userEmail}:`, err.message);
@@ -201,7 +213,7 @@ export async function sendAccountVerificationEmail(
   } else if (transporter) {
     try {
       await transporter.sendMail({
-        from: fromAddress,
+        from: process.env.SMTP_FROM || 'onboarding@resend.dev',
         to: userEmail,
         subject,
         text: textBody,
