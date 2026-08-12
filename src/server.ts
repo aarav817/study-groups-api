@@ -114,11 +114,14 @@ if (process.env.NODE_ENV !== 'test' && require.main === module) {
   const PORT_NUM = parseInt(process.env.PORT || '3000', 10);
   const server = app.listen(PORT_NUM, '0.0.0.0', () => {
     console.log(`Study Groups API Server listening on 0.0.0.0:${PORT_NUM}`);
-    if (process.env.ENABLE_IN_PROCESS_WORKER === 'true') {
+    // Always start the in-process worker unless explicitly disabled.
+    // The separate study-groups-worker container can also run alongside
+    // (Redis rpop is atomic, so no duplicate processing occurs).
+    if (process.env.ENABLE_IN_PROCESS_WORKER !== 'false') {
       console.log('[Server] Starting in-process background email worker...');
       emailWorker.start();
     } else {
-      console.log('[Server] Asynchronous email worker is decoupled (Running as standalone study-groups-worker container)');
+      console.log('[Server] In-process worker disabled. Email queue handled by standalone study-groups-worker container.');
     }
   });
 
