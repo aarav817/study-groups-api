@@ -101,13 +101,13 @@ async function runTests() {
     const ownerToken = ownerRes.body.data.verification_token;
     assert(!!ownerToken, 'Owner signup must return verification token');
 
-    // Login succeeds without requiring email verification
+    // Login is gated for unverified users (returns 403)
     const unverifiedLogin = await request('POST', '/auth/login', {
       email: ownerEmail,
       password: 'Password123!',
     });
-    assert(unverifiedLogin.status === 200, 'User login succeeds without blocking on email verification');
-    console.log('   ✓ Login succeeds directly without email verification gating');
+    assert(unverifiedLogin.status === 403, 'Unverified user login is gated with 403 status');
+    console.log('   ✓ Login is gated for unverified users until email verification');
 
     // Complete account verification via verify-email endpoint
     const ownerVerify = await request('GET', `/auth/verify-email?token=${ownerToken}`);

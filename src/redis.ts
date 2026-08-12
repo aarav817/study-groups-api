@@ -6,10 +6,12 @@ dotenv.config();
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 export const redis = new Redis(REDIS_URL, {
-  lazyConnect: true,
-  maxRetriesPerRequest: 1,
-  enableOfflineQueue: false,
-  retryStrategy: () => null, // Don't spam retries if Redis daemon isn't running
+  maxRetriesPerRequest: null,
+  enableOfflineQueue: true,
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 200, 3000);
+    return delay;
+  },
 });
 
 let isConnected = false;
@@ -23,19 +25,19 @@ const inMemoryCache = new Map<string, CacheItem<any>>();
 
 redis.on('connect', () => {
   isConnected = true;
-  console.log('[Redis] Connected to Redis cache server.');
+  console.log('[Redis] Connected to Redis server.');
 });
 
-redis.on('error', () => {
+redis.on('ready', () => {
+  isConnected = true;
+  console.log('[Redis] Redis client is ready.');
+});
+
+redis.on('error', (err) => {
   if (isConnected) {
-    console.warn('[Redis] Connection lost. Falling back to in-memory cache.');
+    console.warn('[Redis] Connection error. Reconnecting...', err.message);
   }
   isConnected = false;
-});
-
-// Attempt initial connection asynchronously
-redis.connect().catch(() => {
-  console.log('[Redis] Redis daemon not active on ' + REDIS_URL + '. Operating with high-performance in-memory fallback cache.');
 });
 
 /**
@@ -43,7 +45,7 @@ redis.connect().catch(() => {
  */
 export async function getCache<T = any>(key: string): Promise<{ data: T; source: 'redis' | 'memory' } | null> {
   try {
-    if (isConnected) {
+    if (redis.status === 'ready' || redis.status === 'connect') {
       const data = await redis.get(key);
       if (data) {
         return { data: JSON.parse(data) as T, source: 'redis' };
@@ -66,7 +68,7 @@ export async function getCache<T = any>(key: string): Promise<{ data: T; source:
  */
 export async function setCache<T = any>(key: string, value: T, ttlSeconds = 60): Promise<void> {
   try {
-    if (isConnected) {
+    if (redis.status === 'ready' || redis.status === 'connect') {
       await redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
     }
   } catch (err) {
@@ -84,7 +86,7 @@ export async function setCache<T = any>(key: string, value: T, ttlSeconds = 60):
  */
 export async function invalidatePublicGroupsCache(): Promise<void> {
   try {
-    if (isConnected) {
+    if (redis.status === 'ready' || redis.status === 'connect') {
       const keys = await redis.keys('public_groups:*');
       if (keys.length > 0) {
         await redis.del(...keys);
@@ -107,7 +109,7 @@ export async function invalidatePublicGroupsCache(): Promise<void> {
 export async function invalidateMaterialsCache(groupId?: string): Promise<void> {
   const groupPattern = groupId ? `materials:group:${groupId}:*` : 'materials:group:*';
   try {
-    if (isConnected) {
+    if (redis.status === 'ready' || redis.status === 'connect') {
       const groupKeys = await redis.keys(groupPattern);
       const userKeys = await redis.keys('materials:user:*');
       const allKeys = [...groupKeys, ...userKeys];

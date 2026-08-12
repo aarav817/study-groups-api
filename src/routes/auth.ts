@@ -94,7 +94,7 @@ router.post('/signup', async (req: AuthenticatedRequest, res: Response, next: Ne
     return res.status(201).json({
       success: true,
       message: 'Account created! Please check your email address and click the verification link to finish account creation.',
-      data: { user, requires_verification: true },
+      data: { user, verification_token: verificationToken, requires_verification: true },
     });
   } catch (err) {
     next(err);
