@@ -29,31 +29,27 @@ function getResendClient(): Resend | null {
 }
 
 /**
- * Helper to get a configured Nodemailer SMTP transporter if SMTP_HOST or Gmail user is set.
+ * Helper to get a configured Nodemailer SMTP transporter.
  */
 function getTransporter(): nodemailer.Transporter | null {
-  const host = process.env.SMTP_HOST;
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS?.trim();
 
-  if (!host && !user) {
+  if (!user || !pass) {
     return null;
   }
 
-  // Use Nodemailer's native Gmail service connector if using Gmail
-  if ((host && host.includes('gmail.com')) || (user && user.includes('@gmail.com'))) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: user && pass ? { user, pass } : undefined,
-    });
-  }
-
   return nodemailer.createTransport({
-    host,
-    port,
+    host: host.includes('gmail.com') ? 'smtp.gmail.com' : host,
+    port: port === 465 ? 465 : 587,
     secure: port === 465,
-    auth: user && pass ? { user, pass } : undefined,
+    requireTLS: port !== 465,
+    auth: { user, pass },
+    connectionTimeout: 8000, // 8s connection timeout to prevent hanging
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
   });
 }
 
@@ -127,7 +123,7 @@ export async function sendGroupJoinNotification(
       });
       console.log(`[EmailService] Email successfully sent via SMTP to ${ownerEmail}.`);
     } catch (err: any) {
-      console.error(`[EmailService] Failed to send SMTP email to ${ownerEmail}:`, err.stack || err.message);
+      console.error(`[EmailService] Failed to send SMTP email to ${ownerEmail}:`, err.message || err);
       throw err;
     }
   } else if (resend) {
@@ -210,7 +206,7 @@ export async function sendAccountVerificationEmail(
       });
       console.log(`[EmailService] Real verification email successfully sent via SMTP to ${userEmail}.`);
     } catch (err: any) {
-      console.error(`[EmailService] Failed to send SMTP email to ${userEmail}:`, err.stack || err.message);
+      console.error(`[EmailService] Failed to send SMTP email to ${userEmail}:`, err.message || err);
       throw err;
     }
   } else if (resend) {
