@@ -179,7 +179,7 @@ class MetricsCollector {
       ? Math.round((this.dbStats.totalQueryTimeMs / this.dbStats.totalQueries) * 100) / 100
       : 0;
 
-    const { default: pool } = await import('../db');
+    const { default: pool } = await import('../db.js');
 
     const pendingQueueLength = await getQueueLength();
     const deadLetterQueueLength = await getFailedQueueLength();
