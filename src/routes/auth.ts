@@ -77,9 +77,8 @@ router.post('/signup', async (req: AuthenticatedRequest, res: Response, next: Ne
     );
 
     const user = insertResult.rows[0];
-    const host = req.get('host') || 'localhost:3000';
-    const protocol = req.protocol || 'http';
-    const verificationUrl = `${protocol}://${host}/api/v1/auth/verify-email?token=${verificationToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || (req.headers.origin ? req.headers.origin : `https://${req.get('host')}`);
+    const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
     // Queue verification email notification
     await enqueueAccountVerification({
@@ -240,13 +239,21 @@ router.get('/verify-email', async (req: AuthenticatedRequest, res: Response, nex
 
     const user = userResult.rows[0];
     const sessionToken = createSession(user.id);
+    const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('session_token', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax',
+      sameSite: isProd ? 'none' : 'lax',
     });
+
+    if (req.headers.accept?.includes('text/html')) {
+      const frontendUrl = process.env.FRONTEND_URL || (req.headers.origin ? req.headers.origin : '');
+      if (frontendUrl) {
+        return res.redirect(`${frontendUrl}/groups?verified=true`);
+      }
+    }
 
     return res.status(200).json({
       success: true,
