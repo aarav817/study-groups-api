@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import pool from '../db';
 import { getQueueLength, getFailedQueueLength } from '../queue/emailQueue';
 import emailWorker, { isWorkerAlive } from '../worker/emailWorker';
 
@@ -179,6 +178,8 @@ class MetricsCollector {
     const avgQueryTimeMs = this.dbStats.totalQueries > 0
       ? Math.round((this.dbStats.totalQueryTimeMs / this.dbStats.totalQueries) * 100) / 100
       : 0;
+
+    const { default: pool } = await import('../db');
 
     const pendingQueueLength = await getQueueLength();
     const deadLetterQueueLength = await getFailedQueueLength();
