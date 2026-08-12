@@ -90,20 +90,11 @@ router.post('/signup', async (req: AuthenticatedRequest, res: Response, next: Ne
     });
 
     delete user.password_hash;
-    const sessionToken = createSession(user.id);
-    const isProd = process.env.NODE_ENV === 'production';
-
-    res.cookie('session_token', sessionToken, {
-      httpOnly: true,
-      secure: isProd,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: isProd ? 'none' : 'lax',
-    });
 
     return res.status(201).json({
       success: true,
-      message: 'Account registered successfully!',
-      data: { user, session_token: sessionToken, verification_token: verificationToken },
+      message: 'Account created! Please check your email address and click the verification link to finish account creation.',
+      data: { user, requires_verification: true },
     });
   } catch (err) {
     next(err);
@@ -150,6 +141,16 @@ router.post('/login', async (req: AuthenticatedRequest, res: Response, next: Nex
         error: {
           code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password.',
+        },
+      });
+    }
+
+    if (!user.is_verified) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'EMAIL_NOT_VERIFIED',
+          message: 'Please verify your email address before logging in. Check your inbox for the verification link.',
         },
       });
     }
