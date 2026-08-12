@@ -265,3 +265,70 @@ router.get('/verify-email', async (req: AuthenticatedRequest, res: Response, nex
     next(err);
   }
 });
+
+/**
+ * POST /api/v1/auth/resend-verification
+ * Resend account verification email.
+ */
+router.post('/resend-verification', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { email } = req.body || {};
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Email address is required.',
+        },
+      });
+    }
+
+    const userResult = await db.query<User>(
+      'SELECT id, email, full_name, is_verified, verification_token FROM users WHERE email = $1',
+      [email.toLowerCase().trim()]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'If an unverified account exists for this email, a verification link has been sent.',
+      });
+    }
+
+    const user = userResult.rows[0];
+    if (user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'ALREADY_VERIFIED',
+          message: 'This email address has already been verified. Please sign in.',
+        },
+      });
+    }
+
+    let verificationToken = user.verification_token;
+    if (!verificationToken) {
+      verificationToken = crypto.randomBytes(32).toString('hex');
+      await db.query('UPDATE users SET verification_token = $1 WHERE id = $2', [verificationToken, user.id]);
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || (req.headers.origin ? req.headers.origin : `https://${req.get('host')}`);
+    const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+
+    await enqueueAccountVerification({
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.full_name,
+      token: verificationToken,
+      verificationUrl,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'A new verification email has been queued and sent to your inbox!',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
