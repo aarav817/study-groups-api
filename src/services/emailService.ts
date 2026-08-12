@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
@@ -18,19 +18,17 @@ const sentEmailsLog: SentEmailRecord[] = [];
 let simulateFailuresRemaining = 0;
 
 /**
- * Helper to get a configured Resend API client using RESEND_API_KEY.
+ * Initialize SendGrid if API key is available.
  */
-function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey || !apiKey.startsWith('re_')) {
-    return null;
-  }
-  return new Resend(apiKey);
+function initSendGrid(): boolean {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) return false;
+  sgMail.setApiKey(apiKey);
+  return true;
 }
 
 /**
- * Helper to get a configured Nodemailer SMTP transporter.
- * Creates a new transporter per call to avoid stale socket issues.
+ * Helper to get a configured Nodemailer SMTP transporter (local dev fallback).
  */
 function getTransporter(): nodemailer.Transporter | null {
   const host = (process.env.SMTP_HOST || '').trim();
@@ -38,11 +36,8 @@ function getTransporter(): nodemailer.Transporter | null {
   const user = (process.env.SMTP_USER || '').trim();
   const pass = (process.env.SMTP_PASS || '').trim();
 
-  if (!user || !pass) {
-    return null;
-  }
+  if (!user || !pass) return null;
 
-  // Use sensible defaults; for Gmail use TLS on port 587
   const isGmail = host.includes('gmail.com') || (!host && user.includes('gmail.com'));
   const effectiveHost = isGmail ? 'smtp.gmail.com' : (host || 'smtp.gmail.com');
   const effectivePort = port || 587;
@@ -56,16 +51,13 @@ function getTransporter(): nodemailer.Transporter | null {
     connectionTimeout: 15000,
     greetingTimeout: 15000,
     socketTimeout: 30000,
-    tls: {
-      rejectUnauthorized: true,
-      minVersion: 'TLSv1.2',
-    },
+    tls: { rejectUnauthorized: true, minVersion: 'TLSv1.2' },
   } as nodemailer.TransportOptions);
 }
 
 /**
- * Core email sending function. Tries SMTP first, then Resend API.
- * Returns true if sent, throws on failure.
+ * Core email sending function.
+ * Priority: SendGrid HTTP API → SMTP fallback (local dev).
  */
 async function sendEmail(
   to: string,
@@ -73,11 +65,32 @@ async function sendEmail(
   textBody: string,
   htmlBody: string
 ): Promise<void> {
-  const transporter = getTransporter();
-  const resend = getResendClient();
+  const hasSendGrid = initSendGrid();
+  const fromAddress = process.env.SENDGRID_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@studygroups.app';
 
+  // 1. Try SendGrid HTTP API (works on Railway — uses HTTPS port 443)
+  if (hasSendGrid) {
+    console.log(`[EmailService] Sending via SendGrid API to ${to}...`);
+    try {
+      const [response] = await sgMail.send({
+        to,
+        from: fromAddress,
+        subject,
+        text: textBody,
+        html: htmlBody,
+      });
+      console.log(`[EmailService] ✓ Email sent via SendGrid to ${to}. Status: ${response.statusCode}`);
+      return;
+    } catch (err: any) {
+      const body = err.response?.body;
+      console.error(`[EmailService] SendGrid error for ${to}:`, body?.errors || err.message);
+      throw new Error(`SendGrid Error: ${body?.errors?.[0]?.message || err.message}`);
+    }
+  }
+
+  // 2. Fallback: SMTP (works locally, blocked on Railway)
+  const transporter = getTransporter();
   if (transporter) {
-    const fromAddress = process.env.SMTP_FROM || `"Study Groups" <${process.env.SMTP_USER}>`;
     console.log(`[EmailService] Sending via SMTP to ${to}...`);
     try {
       const info = await transporter.sendMail({
@@ -89,44 +102,19 @@ async function sendEmail(
       });
       console.log(`[EmailService] ✓ Email sent via SMTP to ${to}. MessageId: ${info.messageId}`);
       return;
-    } catch (smtpErr: any) {
-      console.error(`[EmailService] SMTP failed for ${to}: ${smtpErr.code || ''} ${smtpErr.message}`);
-      // If Resend is also available, fall through to try it
-      if (resend) {
-        console.log(`[EmailService] Falling back to Resend API...`);
-      } else {
-        throw smtpErr;
-      }
+    } catch (err: any) {
+      console.error(`[EmailService] SMTP failed for ${to}: ${err.code || ''} ${err.message}`);
+      throw err;
     }
   }
 
-  if (resend) {
-    const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
-    console.log(`[EmailService] Sending via Resend API to ${to}...`);
-    const response = await resend.emails.send({
-      from: fromAddress,
-      to: [to],
-      subject,
-      text: textBody,
-      html: htmlBody,
-    });
-
-    if (response.error) {
-      console.error(`[EmailService] Resend API error for ${to}: ${response.error.message}`);
-      throw new Error(`Resend Error: ${response.error.message}`);
-    }
-
-    console.log(`[EmailService] ✓ Email sent via Resend API to ${to}. ID: ${response.data?.id}`);
-    return;
-  }
-
-  console.warn(`[EmailService] No email provider configured (SMTP_USER/SMTP_PASS or RESEND_API_KEY). Logging email locally.`);
+  // 3. No provider configured — log locally
+  console.warn(`[EmailService] No email provider configured. Set SENDGRID_API_KEY (production) or SMTP_USER/SMTP_PASS (local dev).`);
   console.log(`[EmailService] TO: ${to} | SUBJECT: ${subject}`);
 }
 
 /**
  * Configure mock failure simulation for testing retries.
- * @param count Number of consecutive email sends to fail
  */
 export function setSimulatedFailures(count: number) {
   simulateFailuresRemaining = count;
@@ -158,7 +146,6 @@ export async function sendGroupJoinNotification(
 ): Promise<void> {
   if (simulateFailuresRemaining > 0) {
     simulateFailuresRemaining--;
-    console.warn(`[EmailService] Simulated SMTP error for ${ownerEmail}. (${simulateFailuresRemaining} failures remaining)`);
     throw new Error('Simulated SMTP connection error: Failed to connect to mail gateway.');
   }
 
@@ -197,7 +184,6 @@ export async function sendAccountVerificationEmail(
 ): Promise<void> {
   if (simulateFailuresRemaining > 0) {
     simulateFailuresRemaining--;
-    console.warn(`[EmailService] Simulated SMTP error for ${userEmail}. (${simulateFailuresRemaining} failures remaining)`);
     throw new Error('Simulated SMTP connection error: Failed to connect to mail gateway.');
   }
 
