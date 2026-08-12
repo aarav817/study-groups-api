@@ -30,27 +30,98 @@ function getResendClient(): Resend | null {
 
 /**
  * Helper to get a configured Nodemailer SMTP transporter.
+ * Creates a new transporter per call to avoid stale socket issues.
  */
 function getTransporter(): nodemailer.Transporter | null {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const host = (process.env.SMTP_HOST || '').trim();
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').trim();
 
   if (!user || !pass) {
     return null;
   }
 
+  // Use sensible defaults; for Gmail use TLS on port 587
+  const isGmail = host.includes('gmail.com') || (!host && user.includes('gmail.com'));
+  const effectiveHost = isGmail ? 'smtp.gmail.com' : (host || 'smtp.gmail.com');
+  const effectivePort = port || 587;
+
   return nodemailer.createTransport({
-    host: host.includes('gmail.com') ? 'smtp.gmail.com' : host,
-    port: port === 465 ? 465 : 587,
-    secure: port === 465,
-    requireTLS: port !== 465,
+    host: effectiveHost,
+    port: effectivePort,
+    secure: effectivePort === 465,
+    requireTLS: effectivePort !== 465,
     auth: { user, pass },
-    connectionTimeout: 8000, // 8s connection timeout to prevent hanging
-    greetingTimeout: 8000,
-    socketTimeout: 12000,
-  });
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+    tls: {
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2',
+    },
+  } as nodemailer.TransportOptions);
+}
+
+/**
+ * Core email sending function. Tries SMTP first, then Resend API.
+ * Returns true if sent, throws on failure.
+ */
+async function sendEmail(
+  to: string,
+  subject: string,
+  textBody: string,
+  htmlBody: string
+): Promise<void> {
+  const transporter = getTransporter();
+  const resend = getResendClient();
+
+  if (transporter) {
+    const fromAddress = process.env.SMTP_FROM || `"Study Groups" <${process.env.SMTP_USER}>`;
+    console.log(`[EmailService] Sending via SMTP to ${to}...`);
+    try {
+      const info = await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject,
+        text: textBody,
+        html: htmlBody,
+      });
+      console.log(`[EmailService] ✓ Email sent via SMTP to ${to}. MessageId: ${info.messageId}`);
+      return;
+    } catch (smtpErr: any) {
+      console.error(`[EmailService] SMTP failed for ${to}: ${smtpErr.code || ''} ${smtpErr.message}`);
+      // If Resend is also available, fall through to try it
+      if (resend) {
+        console.log(`[EmailService] Falling back to Resend API...`);
+      } else {
+        throw smtpErr;
+      }
+    }
+  }
+
+  if (resend) {
+    const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
+    console.log(`[EmailService] Sending via Resend API to ${to}...`);
+    const response = await resend.emails.send({
+      from: fromAddress,
+      to: [to],
+      subject,
+      text: textBody,
+      html: htmlBody,
+    });
+
+    if (response.error) {
+      console.error(`[EmailService] Resend API error for ${to}: ${response.error.message}`);
+      throw new Error(`Resend Error: ${response.error.message}`);
+    }
+
+    console.log(`[EmailService] ✓ Email sent via Resend API to ${to}. ID: ${response.data?.id}`);
+    return;
+  }
+
+  console.warn(`[EmailService] No email provider configured (SMTP_USER/SMTP_PASS or RESEND_API_KEY). Logging email locally.`);
+  console.log(`[EmailService] TO: ${to} | SUBJECT: ${subject}`);
 }
 
 /**
@@ -106,50 +177,7 @@ export async function sendGroupJoinNotification(
     </div>
   `;
 
-  console.log(`[EmailService] Processing group join notification for ${ownerEmail}...`);
-
-  const transporter = getTransporter();
-  const resend = getResendClient();
-
-  if (transporter) {
-    try {
-      const fromAddress = process.env.SMTP_FROM || `"Study Groups" <${process.env.SMTP_USER}>`;
-      await transporter.sendMail({
-        from: fromAddress,
-        to: ownerEmail,
-        subject,
-        text: textBody,
-        html: htmlBody,
-      });
-      console.log(`[EmailService] Email successfully sent via SMTP to ${ownerEmail}.`);
-    } catch (err: any) {
-      console.error(`[EmailService] Failed to send SMTP email to ${ownerEmail}:`, err.message || err);
-      throw err;
-    }
-  } else if (resend) {
-    try {
-      const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
-      const response = await resend.emails.send({
-        from: fromAddress,
-        to: [ownerEmail],
-        subject,
-        text: textBody,
-        html: htmlBody,
-      });
-
-      if (response.error) {
-        console.error(`[EmailService] Resend API Error for ${ownerEmail}:`, response.error.message);
-        throw new Error(`Resend Error: ${response.error.message}`);
-      }
-
-      console.log(`[EmailService] Email successfully sent via Resend API to ${ownerEmail}. ID: ${response.data?.id}`);
-    } catch (err: any) {
-      console.error(`[EmailService] Resend API error for ${ownerEmail}:`, err.message);
-      throw err;
-    }
-  } else {
-    console.log(`[EmailService] Resend/SMTP API key not configured. Logged notification locally for ${ownerEmail}.`);
-  }
+  await sendEmail(ownerEmail, subject, textBody, htmlBody);
 
   sentEmailsLog.push({
     to: ownerEmail,
@@ -189,50 +217,7 @@ export async function sendAccountVerificationEmail(
     </div>
   `;
 
-  console.log(`[EmailService] Processing verification email for ${userEmail}...`);
-
-  const transporter = getTransporter();
-  const resend = getResendClient();
-
-  if (transporter) {
-    try {
-      const fromAddress = process.env.SMTP_FROM || `"Study Groups" <${process.env.SMTP_USER}>`;
-      await transporter.sendMail({
-        from: fromAddress,
-        to: userEmail,
-        subject,
-        text: textBody,
-        html: htmlBody,
-      });
-      console.log(`[EmailService] Real verification email successfully sent via SMTP to ${userEmail}.`);
-    } catch (err: any) {
-      console.error(`[EmailService] Failed to send SMTP email to ${userEmail}:`, err.message || err);
-      throw err;
-    }
-  } else if (resend) {
-    try {
-      const fromAddress = process.env.RESEND_FROM || 'onboarding@resend.dev';
-      const response = await resend.emails.send({
-        from: fromAddress,
-        to: [userEmail],
-        subject,
-        text: textBody,
-        html: htmlBody,
-      });
-
-      if (response.error) {
-        console.error(`[EmailService] Resend API Error for ${userEmail}:`, response.error.message);
-        throw new Error(`Resend Error: ${response.error.message}`);
-      }
-
-      console.log(`[EmailService] Real verification email successfully sent via Resend API to ${userEmail}. ID: ${response.data?.id}`);
-    } catch (err: any) {
-      console.error(`[EmailService] Resend API error for ${userEmail}:`, err.message);
-      throw err;
-    }
-  } else {
-    console.log(`[EmailService] Resend API key / SMTP not configured. Logged verification link locally for ${userEmail}: ${verificationUrl}`);
-  }
+  await sendEmail(userEmail, subject, textBody, htmlBody);
 
   sentEmailsLog.push({
     to: userEmail,
