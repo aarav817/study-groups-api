@@ -114,8 +114,8 @@ if (process.env.NODE_ENV !== 'test' && require.main === module) {
   const PORT_NUM = parseInt(process.env.PORT || '3000', 10);
   const server = app.listen(PORT_NUM, '0.0.0.0', () => {
     console.log(`Study Groups API Server listening on 0.0.0.0:${PORT_NUM}`);
-    if (process.env.ENABLE_IN_PROCESS_WORKER === 'true') {
-      console.log('[Server] Starting in-process email worker...');
+    if (process.env.ENABLE_IN_PROCESS_WORKER !== 'false') {
+      console.log('[Server] Starting background email worker inside API process...');
       emailWorker.start();
     } else {
       console.log('[Server] Asynchronous email worker is decoupled (Run standalone process via: npm run worker)');
