@@ -9,4 +9,4 @@ Corresponding Frontend: [study-groups-fe](https://github.com/aarav817/study-grou
 ## Key Architecture & Features
 - **Modular REST API Architecture:** Segregated routes for authentication, groups, memberships, events, materials, messaging, and reporting.
 - **Security & Auth:** Password hashing via bcrypt, session token verification.
-- **Asynchronous Task Processing:** Dedicated Redis job queue and worker process.
+- **Asynchronous Processing:** Email and notification worker implemented through Redis to handle non-essential tasks. 
