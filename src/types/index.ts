@@ -26,6 +26,7 @@ export interface StudyGroup {
   creator_name?: string;
   creator_email?: string;
   member_count?: number;
+  max_members: number | null;
   is_member?: boolean;
   user_membership?: GroupMembership | null;
 }

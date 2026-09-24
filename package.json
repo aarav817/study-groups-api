@@ -10,7 +10,8 @@
     "dev": "tsx watch src/server.ts",
     "worker:dev": "tsx watch src/worker.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/api.test.ts && tsx tests/emailQueue.test.ts"
+    "test": "tsx tests/api.test.ts && tsx tests/emailQueue.test.ts",
+    "test:groups": "tsx tests/groupCapacity.test.ts"
   },
   "keywords": [
     "study-groups",

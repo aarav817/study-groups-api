@@ -15,7 +15,7 @@ router.get('/', optionalAuth, async (req: AuthenticatedRequest, res: Response, n
     const isPublicFilter = req.query.public === 'true';
 
     if (isPublicFilter) {
-      const cacheKey = `public_groups:${req.query.q ? (req.query.q as string).trim().toLowerCase() : 'all'}`;
+      const cacheKey = `public_groups:v2:${req.query.q ? (req.query.q as string).trim().toLowerCase() : 'all'}`;
       const cached = await getCache<StudyGroup[]>(cacheKey);
 
       if (cached && cached.data) {
@@ -49,7 +49,7 @@ router.get('/', optionalAuth, async (req: AuthenticatedRequest, res: Response, n
       // CACHE MISS
       const userId = req.user ? req.user.id : null;
       const queryText = `
-        SELECT sg.id, sg.title, sg.description, sg.is_public, sg.created_by, sg.created_at, sg.updated_at,
+        SELECT sg.id, sg.title, sg.description, sg.is_public, sg.max_members, sg.created_by, sg.created_at, sg.updated_at,
                u.full_name AS creator_name,
                (SELECT COUNT(*)::int FROM group_memberships WHERE group_id = sg.id) AS member_count,
                (SELECT COUNT(*)::int > 0 FROM group_memberships WHERE group_id = sg.id AND user_id = $1) AS is_member
@@ -57,7 +57,7 @@ router.get('/', optionalAuth, async (req: AuthenticatedRequest, res: Response, n
         JOIN users u ON sg.created_by = u.id
         WHERE (sg.is_public IS NOT FALSE OR sg.is_public IS NULL)
         ${searchQuery ? ` AND (sg.title ILIKE $2 OR sg.description ILIKE $2)` : ''}
-        ORDER BY member_count DESC, sg.created_at DESC LIMIT 50
+        ORDER BY sg.created_at DESC, sg.id DESC LIMIT 50
       `;
       const params = searchQuery ? [userId, searchQuery] : [userId];
 
@@ -84,7 +84,7 @@ router.get('/', optionalAuth, async (req: AuthenticatedRequest, res: Response, n
     }
 
     const queryText = `
-      SELECT sg.id, sg.title, sg.description, sg.is_public, sg.created_by, sg.created_at, sg.updated_at,
+      SELECT sg.id, sg.title, sg.description, sg.is_public, sg.max_members, sg.created_by, sg.created_at, sg.updated_at,
              u.full_name AS creator_name,
              (SELECT COUNT(*)::int FROM group_memberships WHERE group_id = sg.id) AS member_count,
              TRUE AS is_member
@@ -111,7 +111,7 @@ router.get('/', optionalAuth, async (req: AuthenticatedRequest, res: Response, n
  */
 router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
   try {
-    const { title, description, is_public = true } = req.body || {};
+    const { title, description, is_public = true, max_members = 20 } = req.body || {};
     const isPublicVal = is_public === false || is_public === 'false' ? false : true;
 
     if (!title || typeof title !== 'string' || !title.trim()) {
@@ -135,11 +135,18 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response, n
       });
     }
 
+    if (max_members !== null && (typeof max_members !== 'number' || !Number.isInteger(max_members) || max_members < 1 || max_members > 2147483647)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Maximum members must be a positive whole number, or blank for no limit.' },
+      });
+    }
+
     const groupResult = await db.query<StudyGroup>(
-      `INSERT INTO study_groups (title, description, is_public, created_by)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, title, description, is_public, created_by, created_at, updated_at`,
-      [title.trim(), description ? description.trim() : null, isPublicVal, req.user!.id]
+      `INSERT INTO study_groups (title, description, is_public, created_by, max_members)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, title, description, is_public, max_members, created_by, created_at, updated_at`,
+      [title.trim(), description ? description.trim() : null, isPublicVal, req.user!.id, max_members]
     );
     const group = groupResult.rows[0];
 
@@ -169,7 +176,7 @@ router.get('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Resp
     const { groupId } = req.params;
 
     const groupResult = await db.query<StudyGroup>(
-      `SELECT sg.id, sg.title, sg.description, sg.is_public, sg.created_by, sg.created_at, sg.updated_at,
+      `SELECT sg.id, sg.title, sg.description, sg.is_public, sg.max_members, sg.created_by, sg.created_at, sg.updated_at,
               u.full_name AS creator_name, u.email AS creator_email,
               COUNT(gm.id)::int AS member_count
        FROM study_groups sg
@@ -212,11 +219,14 @@ router.get('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Resp
  * PATCH /api/v1/groups/:groupId
  */
 router.patch('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
+  const client = await db.pool.connect();
+  let committed = false;
   try {
+    await client.query('BEGIN');
     const { groupId } = req.params;
-    const { title, description, is_public } = req.body || {};
+    const { title, description, is_public, max_members } = req.body || {};
 
-    const membership = await db.query<GroupMembership>(
+    const membership = await client.query<GroupMembership>(
       `SELECT role FROM group_memberships WHERE group_id = $1 AND user_id = $2`,
       [groupId, req.user!.id]
     );
@@ -229,6 +239,19 @@ router.patch('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Re
           message: 'Only group owners or admins can update group details.',
         },
       });
+    }
+
+    await client.query('SELECT id FROM study_groups WHERE id = $1 FOR UPDATE', [groupId]);
+
+    if (max_members !== undefined && max_members !== null &&
+        (typeof max_members !== 'number' || !Number.isInteger(max_members) || max_members < 1 || max_members > 2147483647)) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Maximum members must be a positive whole number, or blank for no limit.' } });
+    }
+    if (max_members != null) {
+      const count = await client.query('SELECT COUNT(*)::int AS count FROM group_memberships WHERE group_id = $1', [groupId]);
+      if (max_members < count.rows[0].count) {
+        return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Maximum members cannot be less than the current member count.' } });
+      }
     }
 
     const updates: string[] = [];
@@ -257,6 +280,11 @@ router.patch('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Re
       values.push(isPublicVal);
     }
 
+    if (max_members !== undefined) {
+      updates.push(`max_members = $${paramIdx++}`);
+      values.push(max_members);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({
         success: false,
@@ -267,11 +295,13 @@ router.patch('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Re
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(groupId);
 
-    const result = await db.query<StudyGroup>(
+    const result = await client.query<StudyGroup>(
       `UPDATE study_groups SET ${updates.join(', ')} WHERE id = $${paramIdx} RETURNING *`,
       values
     );
 
+    await client.query('COMMIT');
+    committed = true;
     await invalidatePublicGroupsCache();
 
     return res.status(200).json({
@@ -281,6 +311,13 @@ router.patch('/:groupId', requireAuth, async (req: AuthenticatedRequest, res: Re
     });
   } catch (err) {
     next(err);
+  } finally {
+    // Also rolls back when validation returns early.
+    try {
+      if (!committed) await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   }
 });
 

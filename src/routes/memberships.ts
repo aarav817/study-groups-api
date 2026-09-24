@@ -52,7 +52,7 @@ router.post('/groups/:groupId/members', requireAuth, async (req: AuthenticatedRe
 
     // Acquire row-level lock on target study group to serialize concurrent join operations
     const groupResult = await client.query(
-      'SELECT id, is_public FROM study_groups WHERE id = $1 FOR UPDATE',
+      'SELECT id, is_public, max_members FROM study_groups WHERE id = $1 FOR UPDATE',
       [groupId]
     );
 
@@ -81,20 +81,21 @@ router.post('/groups/:groupId/members', requireAuth, async (req: AuthenticatedRe
       });
     }
 
-    // Enforce 10-member maximum capacity constraint under lock
+    // Enforce the configured capacity under lock
     const countResult = await client.query(
       'SELECT COUNT(*)::int AS count FROM group_memberships WHERE group_id = $1',
       [groupId]
     );
     const memberCount = countResult.rows[0].count;
 
-    if (memberCount >= 10) {
+    const maxMembers = groupResult.rows[0].max_members;
+    if (maxMembers !== null && memberCount >= maxMembers) {
       await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         error: {
           code: 'GROUP_FULL',
-          message: 'This study group has reached its maximum capacity of 10 members.',
+          message: `This study group has reached its maximum capacity of ${maxMembers} members.`,
         },
       });
     }
@@ -326,7 +327,7 @@ router.post('/invites/:token/join', requireAuth, async (req: AuthenticatedReques
     }
 
     // Acquire row lock on target study group
-    await client.query('SELECT id FROM study_groups WHERE id = $1 FOR UPDATE', [invite.group_id]);
+    const groupResult = await client.query('SELECT id, max_members FROM study_groups WHERE id = $1 FOR UPDATE', [invite.group_id]);
 
     const existingMembership = await client.query(
       'SELECT id FROM group_memberships WHERE group_id = $1 AND user_id = $2',
@@ -342,20 +343,21 @@ router.post('/invites/:token/join', requireAuth, async (req: AuthenticatedReques
       });
     }
 
-    // Enforce 10-member limit under lock
+    // Enforce the configured capacity under lock
     const countResult = await client.query(
       'SELECT COUNT(*)::int AS count FROM group_memberships WHERE group_id = $1',
       [invite.group_id]
     );
     const memberCount = countResult.rows[0].count;
 
-    if (memberCount >= 10) {
+    const maxMembers = groupResult.rows[0].max_members;
+    if (maxMembers !== null && memberCount >= maxMembers) {
       await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         error: {
           code: 'GROUP_FULL',
-          message: 'This study group has reached its maximum capacity of 10 members.',
+          message: `This study group has reached its maximum capacity of ${maxMembers} members.`,
         },
       });
     }

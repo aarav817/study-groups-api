@@ -25,6 +25,7 @@ CREATE TABLE study_groups (
     title VARCHAR(150) NOT NULL,
     description TEXT,
     is_public BOOLEAN DEFAULT TRUE,
+    max_members INTEGER DEFAULT 20 CHECK (max_members > 0),
     created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
